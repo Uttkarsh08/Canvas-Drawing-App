@@ -19,7 +19,8 @@ Welcome to the **Canvas Drawing App**! This app is designed to let your creativi
 
 
 ### Video Demo
-https://github.com/user-attachments/assets/d29cee66-b921-4574-b80a-8d5d7c9ad2dd
+https://github.com/user-attachments/assets/26cd6023-ac72-40f7-9c44-da33273d02e0
+
 
 
 
