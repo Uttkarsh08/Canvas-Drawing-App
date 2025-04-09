@@ -45,5 +45,5 @@ https://github.com/user-attachments/assets/26cd6023-ac72-40f7-9c44-da33273d02e0
 ## Tech Stack
 
 - **Programming Language**: Kotlin
-- **UI Framework**: Jetpack Compose
+- **UI Framework**: XML
 - **Development Tool**: Android Studio
