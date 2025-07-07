@@ -1,19 +1,24 @@
 package com.example.drawingapp.ui
 
+import android.Manifest
 import android.app.Activity
 import android.app.Dialog
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.Button
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.PermissionChecker
 import com.example.drawingapp.R
 import com.example.drawingapp.model.DrawingPath
 import com.example.drawingapp.utils.BitmapUtils
@@ -22,6 +27,15 @@ class MainActivity : AppCompatActivity() {
 
     private val viewModel: MainViewModel by viewModels()
     private lateinit var drawingView: DrawingView
+
+    private val requestPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                saveDrawingToGallery()
+            } else {
+                Toast.makeText(this, "Storage permission denied.", Toast.LENGTH_SHORT).show()
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -43,9 +57,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<ImageButton>(R.id.ib_save).setOnClickListener {
-            val bitmap = drawingView.getBitmap()
-            val uri = BitmapUtils.saveBitmapToGallery(this, bitmap)
-            Toast.makeText(this, "Saved to gallery: $uri", Toast.LENGTH_SHORT).show()
+            handleSaveButtonClick()
         }
 
         findViewById<ImageButton>(R.id.ib_brush).setOnClickListener {
@@ -53,11 +65,20 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<ImageButton>(R.id.ib_gallery).setOnClickListener {
-            val intent = Intent(Intent.ACTION_PICK)
-            intent.type = "image/*"
-            startActivityForResult(intent, 101)
+            val intent = Intent(Intent.ACTION_PICK).apply {
+                type = "image/*"
+            }
+            galleryPickerLauncher.launch(intent)
         }
     }
+
+    private val galleryPickerLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val imageUri: Uri? = result.data?.data
+                findViewById<ImageView>(R.id.iv_background)?.setImageURI(imageUri)
+            }
+        }
 
     private fun observePaths() {
         viewModel.paths.observe(this) { paths ->
@@ -85,7 +106,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                Log.d("ColorChange", "Changing color to: $color")
                 drawingView.setColor(color)
 
             } catch (e: Exception) {
@@ -95,27 +115,20 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun showBrushSizeChooserDialog() {
-        Log.e("BrushDialog", "Opening brush dialog")
+        val brushDialog = Dialog(this).apply {
+            setContentView(R.layout.dialog_brush_size)
+            setTitle("Brush size:")
+        }
 
-        val brushDialog = Dialog(this)
-        brushDialog.setContentView(R.layout.dialog_brush_size)
-        brushDialog.setTitle("Brush size:")
-
-        val smallBtn = brushDialog.findViewById<ImageButton>(R.id.ib_small_brush)
-        val mediumBtn = brushDialog.findViewById<ImageButton>(R.id.ib_medium_brush)
-        val largeBtn = brushDialog.findViewById<ImageButton>(R.id.ib_large_brush)
-
-        smallBtn.setOnClickListener {
+        brushDialog.findViewById<ImageButton>(R.id.ib_small_brush).setOnClickListener {
             drawingView.setStrokeWidth(5f)
             brushDialog.dismiss()
         }
-
-        mediumBtn.setOnClickListener {
+        brushDialog.findViewById<ImageButton>(R.id.ib_medium_brush).setOnClickListener {
             drawingView.setStrokeWidth(10f)
             brushDialog.dismiss()
         }
-
-        largeBtn.setOnClickListener {
+        brushDialog.findViewById<ImageButton>(R.id.ib_large_brush).setOnClickListener {
             drawingView.setStrokeWidth(20f)
             brushDialog.dismiss()
         }
@@ -123,11 +136,28 @@ class MainActivity : AppCompatActivity() {
         brushDialog.show()
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == 101 && resultCode == Activity.RESULT_OK) {
-            val imageUri: Uri? = data?.data
-            findViewById<android.widget.ImageView>(R.id.iv_background)?.setImageURI(imageUri)
+    private fun handleSaveButtonClick() {
+        when {
+            Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
+                // No runtime permission required for saving images on Android 10+
+                saveDrawingToGallery()
+            }
+            ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED -> {
+                saveDrawingToGallery()
+            }
+            else -> {
+                requestPermissionLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            }
+        }
+    }
+
+    private fun saveDrawingToGallery() {
+        val bitmap = drawingView.getBitmap()
+        val uri = BitmapUtils.saveBitmapToGallery(this, bitmap)
+        if (uri != null) {
+            Toast.makeText(this, "Saved to gallery successfully!", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Failed to save image.", Toast.LENGTH_SHORT).show()
         }
     }
 }
