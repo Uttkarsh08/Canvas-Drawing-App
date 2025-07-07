@@ -1,4 +1,4 @@
-# Canvas Drawing App
+#DrawCanvas( Canvas Drawing App)
 
 ## Introduction
 
@@ -34,6 +34,11 @@ https://github.com/user-attachments/assets/26cd6023-ac72-40f7-9c44-da33273d02e0
 6. **Save Your Work**: When you're done, simply hit the “Save” button to keep your artwork on your device.
 
 ## Installation
+
+### APK
+Download .apk file from the release section
+
+### Build
 
 1. Clone the repository using the following command:
    ```bash
